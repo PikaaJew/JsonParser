@@ -16,22 +16,25 @@ int main(int argc, char* argv[]) {
 
         head = ParseFile(argv[1]);
         elemOutput = head;
-        int check = 8;
+        int check = -1;
         printf("Enter 1 to print json object \n");
         printf("Enter 2 to print json element or json array\n");
         printf("Enter 3 to get first object in json element or array \n");
         printf("Enter 4 to get next object \n");
         printf("Enter 5 to get prev object \n");
         printf("Enter 6 to find json object by key\n");
-        printf("Enter 7 to quit\n");
+        printf("Enter 7 to get the json element or array from object \n");
+        printf("Enter 8 to quit\n\n");
 
-        while (check != 7) {
+        while (check != 8) {
             scanf("%d", &check);
             if (check == 1) {
                 PrintObject(objectOutput, 0);
+                printf("\n");
             }
             if (check == 2) {
                 PrintJson(elemOutput, 0);
+                printf("\n");
             }
             if (check == 3) {
                 objectOutput = GetFirstObject(elemOutput);
@@ -46,6 +49,17 @@ int main(int argc, char* argv[]) {
                 printf("Enter the key, please\n");
                 scanf("%s", key);
                 objectOutput = FindObjectByKey(elemOutput, key);
+            }
+            if (check == 7) {
+                if (objectOutput->obj_type == JSON_ELEM) {
+                    elemOutput = GetObjectValue(objectOutput, JSON_ELEM, UNDEF_VALUE);
+                    printf("\n");
+                } else if (objectOutput->obj_type == JSON_ARRAY) {
+                    elemOutput = GetObjectValue(objectOutput, JSON_ARRAY, UNDEF_VALUE);
+                    printf("\n");
+                } else {
+                    fprintf(stderr, "Can not get this Value");
+                }
             }
         }
 
