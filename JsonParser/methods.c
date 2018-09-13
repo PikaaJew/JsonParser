@@ -1,11 +1,18 @@
 #include "methods.h"
 
-void PrintObject(jsonObjectOrArrValue* object) {
+void PrintTabs(int numOfTabs) {
+    for (int i = 0; i < numOfTabs; i++) {
+        printf("\t");
+    }
+}
+
+void PrintObject(jsonObjectOrArrValue* object, int numOfTabs) {
     if (object != NULL) {
-        if (object->key != NULL) {
+        PrintTabs(numOfTabs);
+        if (object->key != NULL) {            
             printf("%s : ", object->key);
         }
-        if (object->obj_type == SIMPLE_ELEM) {
+        if (object->obj_type == SIMPLE_ELEM) {            
             if (object->smplValue->typeValue == STRING_T) {
                 printf("%s", (char*)object->smplValue->singleValue);
             }
@@ -21,31 +28,44 @@ void PrintObject(jsonObjectOrArrValue* object) {
             if (object->smplValue->typeValue == BOOL_T) {
                 printf("%d", *((bool*)object->smplValue->singleValue));
             }
+            if (object->next != NULL) {
+                printf(",");
+            }
+            printf("\n");
         } else if (object->obj_type == JSON_ELEM) {
-            printf("\n\t{");
-            PrintJson(object->jsonChildOrArr);
-            printf("}\n\t");
+            printf("\n");
+            PrintTabs(numOfTabs + 1);
+            printf("{\n");
+            PrintJson(object->jsonChildOrArr, numOfTabs + 1);
+            PrintTabs(numOfTabs + 1);
+            if (object->next != NULL) {
+                printf("},\n");
+            } else {
+                printf("}\n");
+            }
         } else if (object->obj_type == JSON_ARRAY) {
-            printf("\n\t[");
-            PrintJson(object->jsonChildOrArr);
-            printf("\n\t]");
+            printf("\n");
+            PrintTabs(numOfTabs + 1);
+            printf("[\n");
+            PrintJson(object->jsonChildOrArr, numOfTabs + 1);
+            PrintTabs(numOfTabs + 1);
+            if (object->next != NULL) {
+                printf("],\n");
+            } else {
+                printf("]\n");
+            }
         }
     } else {
         fprintf(stderr,"Current object is NULL\n");
     }
 }
 
-void PrintJson(jsonElementOrArr* elementOrArr) {
+void PrintJson(jsonElementOrArr* elementOrArr, int numOfTabs) {
     if (elementOrArr != NULL) {
         if (!(elementOrArr->isEmpty)) {
             jsonObjectOrArrValue* thisObject = elementOrArr->objectOrArrFirstEl;
             for (int i = 0; i < elementOrArr->size; i++) {
-                PrintObject(thisObject);
-                if (i != 0) {
-                    printf(",\n\t");
-                } else {
-                    printf("\n\t");
-                }
+                PrintObject(thisObject, numOfTabs);
                 thisObject = thisObject->next;
             }
         }
@@ -179,9 +199,3 @@ void* GetObjectValue(jsonObjectOrArrValue* object, OBJECT_TYPE obj_type, VALUE_T
     }
     return NULL;
 }
-
-
-
-
-
-

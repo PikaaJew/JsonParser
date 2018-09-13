@@ -5,22 +5,25 @@ void PrintError(ERRORS *errorcode, int cur)
     char *ErrorNotification[LAST] =
     {
         "ERROR: Not enough memory",
-        "ERROR: Can't open the file",
+        "ERROR: Can not open the file",
         "ERROR: Invalid JSON",
         "ERROR: Incorrect key",
         "ERROR: Incorrect value",
-        "ERROR: Json bracers or brackets mistake",
+        "ERROR: JSON bracers or brackets mistake",
         "ERROR: Incorrect special symbols using"
     };
     fprintf(stderr, "%s on symbol %d\n", ErrorNotification[*errorcode - 1], cur);
 }
 
 
-
 bool CheckJson(char* str, ERRORS* errorcode) {
     int i = 0, j = 0;
     short quoteOpened = -1;
     char* stack = malloc(sizeof(char) * 100), *memtest;
+    if (stack == NULL) {
+        *errorcode = ERR_NOT_ENOUGH_MEMORY;
+        return false;
+    }
     stack[0] = '0';
     bool inRoot = false;
     while (str[i] != '\0') {
@@ -193,6 +196,7 @@ void CheckKey(char* str, int* cur, ERRORS* errorcode) {
         (*cur)++;
         if(!isspace(str[*cur]) && str[*cur] != ':') {
             *errorcode = ERR_INCORRECT_KEY;
+            break;
         }
     }
     (*cur)++;

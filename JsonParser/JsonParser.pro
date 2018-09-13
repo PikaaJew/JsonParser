@@ -5,11 +5,14 @@ CONFIG -= qt
 
 SOURCES += \
         main.c \
-    run.c \
     error.c \
-    methods.c
+    methods.c \
+    parse.c \
+    freejson.c
 
 HEADERS += \
-    run.h \
     error.h \
-    methods.h
+    methods.h \
+    parse.h \
+    freejson.h \
+    tree.h

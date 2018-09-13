@@ -1,4 +1,4 @@
-#include "run.h"
+#include "parse.h"
 
 char* ReadJson(char* filename, ERRORS* errorcode) {
     FILE *f;
@@ -13,6 +13,10 @@ char* ReadJson(char* filename, ERRORS* errorcode) {
         return NULL;
     }
     str = malloc(sizeof(char) * 100);
+    if (str == NULL) {
+        *errorcode = ERR_NOT_ENOUGH_MEMORY;
+        return NULL;
+    }
     if (str == NULL) {
         free(str);
         *errorcode = ERR_NOT_ENOUGH_MEMORY;
@@ -38,94 +42,6 @@ char* ReadJson(char* filename, ERRORS* errorcode) {
     return(str);
 }
 
-jsonElementOrArr* ParseFile(char *filename) {
-    char* str = NULL;
-    ERRORS errorcode = NO_ERR;
-    jsonElementOrArr* head = NULL;
-
-    str = ReadJson(filename, &errorcode);
-    if (errorcode != NO_ERR) {
-        PrintError(&errorcode, 0);
-        return NULL;
-    }
-
-    bool* rootIsArray = malloc(sizeof(bool));
-    int cur = 0;
-    str = MakeRoot(str, &cur, rootIsArray, &errorcode);
-
-    head = JsonParse(str, cur, rootIsArray, &errorcode);
-
-    free(str);
-    free(rootIsArray);
-    return head;
-}
-
-value* freeValue(value* val) {
-    free(val->singleValue);
-    free(val);
-    val = NULL;
-    return val;
-}
-
-jsonObjectOrArrValue* freeJsonObject(jsonObjectOrArrValue* jsonObj) {
-    if (jsonObj == NULL) {
-        return NULL;
-    }
-    while (jsonObj->next != NULL) {
-        jsonObj = jsonObj->next;
-    }
-    while (jsonObj->prev != NULL) {
-        if (jsonObj->key != NULL) {
-            free(jsonObj->key);
-        }
-        if (jsonObj->obj_type != UNDEF_OBJ) {
-            if (jsonObj->obj_type == SIMPLE_ELEM && jsonObj->smplValue != NULL) {
-                jsonObj->smplValue = freeValue(jsonObj->smplValue);
-                jsonObj->smplValue = NULL;
-            }
-            else if ((jsonObj->obj_type == JSON_ELEM || jsonObj->obj_type == JSON_ARRAY) && jsonObj->jsonChildOrArr != NULL) {
-                jsonObj->jsonChildOrArr = freeJsonElement(jsonObj->jsonChildOrArr);
-                jsonObj->jsonChildOrArr = NULL;
-            }
-        }
-        jsonObjectOrArrValue *tmp = jsonObj;
-        jsonObj = jsonObj->prev;
-        tmp->prev = NULL;
-        jsonObj->next = NULL;
-        free(tmp);
-        tmp = NULL;
-    }
-
-    if (jsonObj->key != NULL) {
-        free(jsonObj->key);
-    }
-    if (jsonObj->obj_type != UNDEF_OBJ) {
-        if (jsonObj->obj_type == SIMPLE_ELEM && jsonObj->smplValue != NULL) {
-            jsonObj->smplValue = freeValue(jsonObj->smplValue);
-            jsonObj->smplValue = NULL;
-        }
-        else if ((jsonObj->obj_type == JSON_ELEM || jsonObj->obj_type == JSON_ARRAY) && jsonObj->jsonChildOrArr != NULL) {
-            jsonObj->jsonChildOrArr = freeJsonElement(jsonObj->jsonChildOrArr);
-            jsonObj->jsonChildOrArr = NULL;
-        }
-    }
-
-    free(jsonObj);
-    jsonObj = NULL;
-    return jsonObj;
-}
-
-jsonElementOrArr* freeJsonElement(jsonElementOrArr* jsonEl) {
-    if (jsonEl != NULL) {
-        if (jsonEl->objectOrArrFirstEl != NULL) {
-            jsonEl->objectOrArrFirstEl = freeJsonObject(jsonEl->objectOrArrFirstEl);
-        }
-        free(jsonEl);
-        jsonEl = NULL;
-        return jsonEl;
-    }
-    return NULL;
-}
 
 int GetSize(char* str) {
     int i = 0;
@@ -168,6 +84,10 @@ char* MakeRoot(char* str, int* cur, bool* rootIsArray, ERRORS* errorcode) {
     str = strcat(str, "}");
     int size = GetSize(str);
     char* tmp = malloc(sizeof(char) * (size + 10));
+    if (tmp == NULL) {
+        *errorcode = ERR_NOT_ENOUGH_MEMORY;
+        return NULL;
+    }
     tmp[0] = '{';
     tmp[1] = '"';
     tmp[2] = 'r';
@@ -254,6 +174,10 @@ OBJECT_TYPE DefineObject(char* str, int* cur) {
 char* GetKey(char* str, int* cur, ERRORS* errorcode) {
     bool quoteOpened = false;
     char* buffer = malloc(sizeof(char) * 101);
+    if (buffer == NULL) {
+        *errorcode = ERR_NOT_ENOUGH_MEMORY;
+        return NULL;
+    }
     char* memtest;
     int i = 0;
     *cur = ToTheNearestQuote(str, *cur, errorcode, &quoteOpened);
@@ -301,7 +225,10 @@ void* GetValue(char* str, int* cur, VALUE_TYPE* typeValue, ERRORS* errorcode) {
     }
     if (str[*cur] == '"') {
         buffer = malloc(sizeof(char) * 101);
-        //bool gotValue = false;
+        if (buffer == NULL) {
+            *errorcode = ERR_NOT_ENOUGH_MEMORY;
+            return NULL;
+        }
         (*cur)++;
         while (!(str[*cur] == '"' && str[*cur - 1] != '\\')) { //After while we are on closing quote
 
@@ -334,30 +261,52 @@ void* GetValue(char* str, int* cur, VALUE_TYPE* typeValue, ERRORS* errorcode) {
         }
         if (str[*cur] == 't') {
             CheckValue(str, cur, 't', errorcode);
+            if (*errorcode != NO_ERR) {
+                return NULL;
+            }
             (*typeValue) = BOOL_T;
             bool_value = malloc(sizeof(bool));
+            if (bool_value == NULL) {
+                *errorcode = ERR_NOT_ENOUGH_MEMORY;
+            }
             *bool_value = true;
             return bool_value;
         }
         if (str[*cur] == 'f') {
             CheckValue(str, cur, 'f', errorcode);
+            if (*errorcode != NO_ERR) {
+                return NULL;
+            }
             (*typeValue) = BOOL_T;
             bool_value = malloc(sizeof(bool));
+            if (bool_value == NULL) {
+                *errorcode = ERR_NOT_ENOUGH_MEMORY;
+            }
             *bool_value = false;
             return bool_value;
         }
         if (isdigit(str[*cur]) || str[*cur] == '.' || str[*cur] == '-') {
             numValue = malloc(sizeof(double));
+            if (numValue == NULL) {
+                *errorcode = ERR_NOT_ENOUGH_MEMORY;
+                return NULL;
+            }
             numberBeg = (*cur);
             isDouble = CheckValue(str, cur, 'd', errorcode);
             valueEnd = *cur;
 
             if (*errorcode != NO_ERR) {
+                free(numValue);
                 return NULL;
             }
             (*cur) = numberBeg;
 
             buffer = malloc(sizeof(char) * 50);
+            if (buffer == NULL) {
+                *errorcode = ERR_NOT_ENOUGH_MEMORY;
+                free(numValue);
+                return NULL;
+            }
             while (isdigit(str[*cur]) || str[*cur] == '.' || str[*cur] == 'e' || str[*cur] == 'E' || str[*cur] == '-' || str[*cur] == '+') {
                 buffer[i] = str[*cur];
                 i++;
@@ -383,6 +332,11 @@ void* GetValue(char* str, int* cur, VALUE_TYPE* typeValue, ERRORS* errorcode) {
 
 value* GetValueStruc(char* str, int* cur, ERRORS* errorcode) {
     value* head = malloc(sizeof(value));
+    if (head == NULL) {
+        *errorcode = ERR_NOT_ENOUGH_MEMORY;
+        head = freeValue(head);
+        return NULL;
+    }
 
     head->singleValue = GetValue(str, cur, &(head->typeValue), errorcode);
     if (*errorcode != NO_ERR) {
@@ -395,6 +349,10 @@ value* GetValueStruc(char* str, int* cur, ERRORS* errorcode) {
 jsonElementOrArr* ParseElementOrArr(char* str, int* cur, OBJECT_TYPE prevObjType, ERRORS* errorcode) { //starting with opening braces
 
     jsonElementOrArr* newElement = malloc(sizeof(jsonElementOrArr));
+    if (newElement == NULL) {
+        *errorcode = ERR_NOT_ENOUGH_MEMORY;
+        return NULL;
+    }
     newElement->objectOrArrFirstEl = NULL;
     newElement->size = 0;
 
@@ -410,6 +368,14 @@ jsonElementOrArr* ParseElementOrArr(char* str, int* cur, OBJECT_TYPE prevObjType
 
     while (!isParsed) {
         jsonObjectOrArrValue* newObject = malloc(sizeof(jsonObjectOrArrValue));
+        if (newObject == NULL) {
+            *errorcode = ERR_NOT_ENOUGH_MEMORY;
+            newElement = freeJsonElement(newElement);
+            if (headObject != NULL) {
+                headObject = freeJsonObject(headObject);
+            }
+            return NULL;
+        }
         newObject->next = NULL;
         newObject->prev = NULL;
         newObject->obj_type = UNDEF_OBJ;
@@ -485,8 +451,6 @@ jsonElementOrArr* ParseElementOrArr(char* str, int* cur, OBJECT_TYPE prevObjType
 }
 
 jsonElementOrArr* JsonParse(char* str, int cur, bool* rootIsArray, ERRORS* errorcode) {
-
-
     CheckJson(str, errorcode);
     if (*errorcode != NO_ERR) {
         PrintError(errorcode, cur);
@@ -504,5 +468,32 @@ jsonElementOrArr* JsonParse(char* str, int cur, bool* rootIsArray, ERRORS* error
         freeJsonElement(head);
         return NULL;
     }
+    return head;
+}
+
+jsonElementOrArr* ParseFile(char *filename) {
+    char* str = NULL;
+    ERRORS errorcode = NO_ERR;
+    jsonElementOrArr* head = NULL;
+
+    str = ReadJson(filename, &errorcode);
+    if (errorcode != NO_ERR) {
+        PrintError(&errorcode, 0);
+        return NULL;
+    }
+
+    bool* rootIsArray = malloc(sizeof(bool));
+    if (rootIsArray == NULL) {
+        errorcode = ERR_NOT_ENOUGH_MEMORY;
+        PrintError(&errorcode, 0);
+        return NULL;
+    }
+    int cur = 0;
+    str = MakeRoot(str, &cur, rootIsArray, &errorcode);
+
+    head = JsonParse(str, cur, rootIsArray, &errorcode);
+
+    free(str);
+    free(rootIsArray);
     return head;
 }
